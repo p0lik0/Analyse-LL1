@@ -6,14 +6,14 @@
 #define SIMPLE_ASSIGN_ASSIGNATIONS_H
 
 void parseS();
-float parseA();
-float parseE();
-float parseEp(float val);
-float parseT();
-float parseTp(float val);
-float parseP();
-float parsePp(float val);
-float parseU();
-float parseF();
+void parseA();
+void parseE();
+void parseEp();
+void parseT();
+void parseTp();
+void parseP();
+void parsePp();
+void parseU();
+void parseF();
 
 #endif //SIMPLE_ASSIGN_ASSIGNATIONS_H

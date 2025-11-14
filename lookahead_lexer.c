@@ -81,6 +81,7 @@ void consume(int tokenType) {
         exit(1);
     }
     else if (t->type == tokenType) {
+        fprintf(stderr, "CONSUME: %s (type %d)\n", t->text, t->type);
         __lookahead_dequeue();
     } else {
         fprintf(stderr, "Token mismatch while consuming token (expected type %d/actual type %d)", tokenType, t->type);

@@ -53,50 +53,179 @@ void print_symbols() {
 }
 
 /************** Grammaire *****************/
-void parseS(){
 
+void error(char *m){
+    fprintf(stderr,"Erreur : %s\n", m);
 }
-float parseA(){
-    if ()
-}
-float parseE(){
+
+void parseS(){
     if(currentToken()!=NULL && (currentToken()->type==PLUS || currentToken()->type==MINUS 
     || currentToken()->type==OPAR || currentToken()->type==VAR || currentToken()->type==INT)){
-        float t = parseT();
-        return parseEp(t);
+        parseA();
+        consume(SEMICOLON);
+        parseS();
+    }
+    else if(currentToken()==NULL){
+        return;
+    }
+    else{
+        error("Erreur en partion de S"); 
+    }
+}
+void parseA(){
+    if(currentToken()!=NULL){
+        if(currentToken()->type==PLUS || currentToken()->type==MINUS 
+        || currentToken()->type==OPAR  || currentToken()->type==INT){
+            parseE();
+        }
+        else if(currentToken()->type==VAR || lookup(2)->type==ASSIGN){
+            consume(VAR);
+            consume(ASSIGN);
+            parseA();
+            return;
+        }
+        else{
+            parseE();
+        }
+    }
+    else{
+        error("Erreur en partion de S"); 
+    }
+}
+void parseE(){
+    if(currentToken()!=NULL && (currentToken()->type==PLUS || currentToken()->type==MINUS 
+    || currentToken()->type==OPAR || currentToken()->type==VAR || currentToken()->type==INT)){
+        parseT();
+        parseEp();
     }
     else{
         error("Erreur en partion de E"); 
     }
 }
-float parseEp(){
+void parseEp(){
     if(currentToken()!=NULL){
         if(currentToken()->type==PLUS){
             consume(PLUS);
-            float t = parseT();
-            return parseEp(t);
         }
-        if(currentToken()->type==MINUS){
+        else if(currentToken()->type==MINUS){
             consume(MINUS);
-            float t = parseT();
-            return parseEp(t);
         }
+        else if(currentToken()->type==FPAR || currentToken()->type==SEMICOLON){
+            return ;
+        }
+        parseT();
+        parseEp();
     }
     else{
         error("Erreur en partion de E' "); 
     }
 }
-float parseT();
-float parseTp();
-float parseP();
-float parsePp();
-float parseU();
-float parseF();
+void parseT(){
+    if(currentToken()!=NULL && (currentToken()->type==PLUS || 
+    currentToken()->type==MINUS || currentToken()->type==OPAR || 
+    currentToken()->type==VAR ||currentToken()->type==INT)){
+        parseP();
+        parseTp();
+    }
+    else{
+        error("Erreur en partion de T "); 
+    }
+}
+void parseTp(){
+    if(currentToken()!=NULL){
+        if(currentToken()->type==PLUS || 
+        currentToken()->type==MINUS || currentToken()->type==FPAR || 
+        currentToken()->type==SEMICOLON){
+            return;
+        }
+        else if(currentToken()->type==MULT){
+            consume(MULT);
+        }
+        else if(currentToken()->type==DIV){
+            consume(DIV);
+        }
+        parseP();
+        parseTp();
+    }
+    else{
+        error("Erreur en partion de T' "); 
+    }
+}
+void parseP(){
+    if(currentToken()!=NULL && (currentToken()->type==PLUS || 
+    currentToken()->type==MINUS || currentToken()->type==OPAR || 
+    currentToken()->type==VAR ||currentToken()->type==INT)){
+        parseU();
+        parsePp();
+    }
+    else{
+        error("Erreur en partion de P "); 
+    }
+}
+void parsePp(){
+    if(currentToken()!=NULL){
+        if(currentToken()->type==PLUS || 
+        currentToken()->type==MINUS || currentToken()->type==FPAR || 
+        currentToken()->type==SEMICOLON || currentToken()->type==MULT
+        || currentToken()->type==DIV){
+            return;
+        }
+        else if(currentToken()->type==EXPON){
+            consume(EXPON);
+        }
+        parseU();
+        parsePp();
+    }
+    else{
+        error("Erreur en partion de P' "); 
+    }
+}
+void parseU(){
+    if(currentToken()!=NULL){
+        if(currentToken()->type==PLUS){
+            consume(PLUS);
+        }
+        else if(currentToken()->type==MINUS){
+            consume(MINUS);
+        }
+        else if(currentToken()->type==OPAR || currentToken()->type==VAR
+        || currentToken()->type==INT){
+            parseF();
+            return;
+        }
+        parseU();
+    }
+    else{
+        error("Erreur en partion de U "); 
+    }
+}
+void parseF(){
+    if(currentToken()!=NULL){
+        if(currentToken()->type==OPAR){
+            consume(OPAR);
+            parseA();
+            consume(FPAR);
+            return;
+        }
+        else if(currentToken()->type==VAR){
+            consume(VAR);
+        }
+        else if(currentToken()->type==INT){
+            consume(INT);
+        }
+    }
+    else{
+        error("Erreur en partion de F "); 
+    }
+}
 /********* PROGRAMME PRINCIPAL **************/
 int main(int argc, char *argv[]) {
     // fprintf(stderr, "Lexing from %s.\n", argv[1]);
     initLexer(argv[1]);
     // APPEL A LA SOURCE DE LA GRAMMAIRE
+
+    fprintf(stderr, "Starting parse...\n");
+    parseS();
 
     // ON VERIFIE QUE LA GRAMMAIRE A BIEN TERMINE SON TRAVAIL A LA FIN DU MOT A ANALYSER
     if (currentToken() != NULL) {
