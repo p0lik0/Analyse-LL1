@@ -55,13 +55,17 @@ void print_symbols() {
 /************** Grammaire *****************/
 
 void error(char *m){
-    fprintf(stderr,"Erreur : %s\n", m);
+    fprintf(stderr,"!!! ERREUR !!!\n");
+    //fprintf(stderr,"%s\n", m);
+    exit(1);
 }
 
 void parseS(){
     if(currentToken()!=NULL && (currentToken()->type==PLUS || currentToken()->type==MINUS 
     || currentToken()->type==OPAR || currentToken()->type==VAR || currentToken()->type==INT)){
         parseA();
+        if (currentToken() == NULL || currentToken()->type != SEMICOLON)
+            error("Token inattendu pour S");
         consume(SEMICOLON);
         parseS();
     }
@@ -72,146 +76,201 @@ void parseS(){
         error("Erreur en partion de S"); 
     }
 }
-void parseA(){
+int parseA(){
     if(currentToken()!=NULL){
         if(currentToken()->type==PLUS || currentToken()->type==MINUS 
         || currentToken()->type==OPAR  || currentToken()->type==INT){
-            parseE();
+            return parseE();
         }
-        else if(currentToken()->type==VAR || lookup(2)->type==ASSIGN){
+        else if(currentToken()->type==VAR && lookup(2)->type==ASSIGN){
+            char *t = strdup(currentToken()->text);
             consume(VAR);
             consume(ASSIGN);
-            parseA();
-            return;
+            int v = parseA();
+            set_value(t,v);
+            free(t);
+            return v;
         }
-        else{
-            parseE();
+        else if(currentToken()->type==VAR){
+            return parseE();
+        }
+        else {
+            error("Token inattendu pour A");
         }
     }
     else{
-        error("Erreur en partion de S"); 
+        error("Erreur en partion de A"); 
     }
+
 }
-void parseE(){
-    if(currentToken()!=NULL && (currentToken()->type==PLUS || currentToken()->type==MINUS 
-    || currentToken()->type==OPAR || currentToken()->type==VAR || currentToken()->type==INT)){
-        parseT();
-        parseEp();
+int parseE(){
+    if(currentToken()!=NULL){
+        if(currentToken()->type==PLUS || currentToken()->type==MINUS 
+        || currentToken()->type==OPAR || currentToken()->type==VAR || currentToken()->type==INT){
+            int v = parseT();
+            return parseEp(v);
+        }
+        else {
+            error("Token inattendu pour E");
+        }
     }
     else{
         error("Erreur en partion de E"); 
     }
 }
-void parseEp(){
+int parseEp(int res){
     if(currentToken()!=NULL){
         if(currentToken()->type==PLUS){
             consume(PLUS);
+            res += parseT();
+            return parseEp(res);
         }
         else if(currentToken()->type==MINUS){
             consume(MINUS);
+            res -= parseT();
+            return parseEp(res);
         }
         else if(currentToken()->type==FPAR || currentToken()->type==SEMICOLON){
-            return ;
+            return res;
         }
-        parseT();
-        parseEp();
+        else {
+            error("Token inattendu pour E'");
+        }
     }
     else{
-        error("Erreur en partion de E' "); 
+        error("Erreur en partion de E' (token NULL)"); 
     }
 }
-void parseT(){
-    if(currentToken()!=NULL && (currentToken()->type==PLUS || 
-    currentToken()->type==MINUS || currentToken()->type==OPAR || 
-    currentToken()->type==VAR ||currentToken()->type==INT)){
-        parseP();
-        parseTp();
+int parseT(){
+    if(currentToken()!=NULL){
+        if(currentToken()->type==PLUS || 
+        currentToken()->type==MINUS || currentToken()->type==OPAR || 
+        currentToken()->type==VAR ||currentToken()->type==INT){
+            int v = parseP();
+            return parseTp(v);
+        }
+        else {
+            error("Token inattendu pour T");
+        }
     }
     else{
-        error("Erreur en partion de T "); 
+            error("Erreur en partion de T "); 
     }
 }
-void parseTp(){
+int parseTp(int res){
     if(currentToken()!=NULL){
         if(currentToken()->type==PLUS || 
         currentToken()->type==MINUS || currentToken()->type==FPAR || 
         currentToken()->type==SEMICOLON){
-            return;
+            return res;
         }
         else if(currentToken()->type==MULT){
             consume(MULT);
+            res *= parseP();
+            return parseTp(res);
         }
         else if(currentToken()->type==DIV){
             consume(DIV);
+            int d = parseP();
+            if (d == 0) error("Division par zero");        
+            res /= d;
+            return parseTp(res);
         }
-        parseP();
-        parseTp();
+        else {
+            error("Token inattendu pour T'");
+        }
     }
     else{
         error("Erreur en partion de T' "); 
     }
 }
-void parseP(){
-    if(currentToken()!=NULL && (currentToken()->type==PLUS || 
-    currentToken()->type==MINUS || currentToken()->type==OPAR || 
-    currentToken()->type==VAR ||currentToken()->type==INT)){
-        parseU();
-        parsePp();
+int parseP(){
+    if(currentToken()!=NULL){
+        if(currentToken()->type==PLUS || 
+        currentToken()->type==MINUS || currentToken()->type==OPAR || 
+        currentToken()->type==VAR ||currentToken()->type==INT){
+            int v = parseU();
+            return parsePp(v);
+        }
+        else {
+            error("Token inattendu pour P");
+        }
     }
     else{
         error("Erreur en partion de P "); 
     }
 }
-void parsePp(){
+int parsePp(int res){
     if(currentToken()!=NULL){
         if(currentToken()->type==PLUS || 
         currentToken()->type==MINUS || currentToken()->type==FPAR || 
         currentToken()->type==SEMICOLON || currentToken()->type==MULT
         || currentToken()->type==DIV){
-            return;
+            return res;
         }
         else if(currentToken()->type==EXPON){
             consume(EXPON);
+            int u = parseU();
+            int r = res;
+            if(u>0){
+                for(int i=1; i<u; i++){
+                    res *= r;
+                }
+            }
+            else res=0;
+            return parsePp(res);
         }
-        parseU();
-        parsePp();
+        else {
+            error("Token inattendu pour P'");
+        }
     }
     else{
         error("Erreur en partion de P' "); 
     }
 }
-void parseU(){
+int parseU(){
     if(currentToken()!=NULL){
         if(currentToken()->type==PLUS){
             consume(PLUS);
+            return parseU();
         }
         else if(currentToken()->type==MINUS){
             consume(MINUS);
+            return -parseU();
         }
         else if(currentToken()->type==OPAR || currentToken()->type==VAR
         || currentToken()->type==INT){
-            parseF();
-            return;
+            return parseF();
         }
-        parseU();
+        else {
+            error("Token inattendu pour U");
+        }
     }
     else{
         error("Erreur en partion de U "); 
     }
 }
-void parseF(){
+int parseF(){
     if(currentToken()!=NULL){
         if(currentToken()->type==OPAR){
             consume(OPAR);
-            parseA();
+            int v = parseA();
             consume(FPAR);
-            return;
+            return v;
         }
         else if(currentToken()->type==VAR){
+            char * t = get_text(currentToken());
+            int v = get_value(t);
             consume(VAR);
+            return v;
         }
         else if(currentToken()->type==INT){
+            int v = currentToken()->intValue;
             consume(INT);
+            return v;
+        }
+        else {
+            error("Token inattendu pour F");
         }
     }
     else{
@@ -224,13 +283,13 @@ int main(int argc, char *argv[]) {
     initLexer(argv[1]);
     // APPEL A LA SOURCE DE LA GRAMMAIRE
 
-    fprintf(stderr, "Starting parse...\n");
+    //fprintf(stderr, "Starting parse...\n");
     parseS();
 
     // ON VERIFIE QUE LA GRAMMAIRE A BIEN TERMINE SON TRAVAIL A LA FIN DU MOT A ANALYSER
     if (currentToken() != NULL) {
         fprintf(stderr, "Unexpected input after assignation.\n");
-        fprintf(stdout, "!!! ERREUR !!!\n");
+        fprintf(stderr, "!!! ERREUR !!!\n");
         return 1;
     }
     // ET ON AFFICHE LA TABLE DES SYMBOLES
